@@ -4,6 +4,7 @@ namespace App\Repository\DoctrineORM;
 
 use App\Entity\Prediction;
 use App\Repository\PredictionRepositoryInterface;
+use App\Service\Core\Exception\RepositoryException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -20,18 +21,45 @@ class PredictionRepository extends ServiceEntityRepository implements Prediction
         parent::__construct($registry, Prediction::class);
     }
 
-    public function save(Prediction $predictionEntity): bool
+    /**
+     * @param Prediction $predictionEntity
+     * @throws RepositoryException
+     */
+    public function save(Prediction $predictionEntity): void
     {
-        // TODO: Implement save() method.
+        try {
+            $em = $this->getEntityManager();
+            $em->persist($predictionEntity);
+            $em->flush();
+        } catch (\Exception $e) {
+            throw new RepositoryException('Failed to save Prediction in database.', 0, $e);
+        }
     }
 
+    /**
+     * @param int $id
+     * @return Prediction|null
+     * @throws RepositoryException
+     */
     public function getById(int $id): ?Prediction
     {
-        // TODO: Implement save() method.
+        try {
+            return $this->find($id);
+        } catch (\Exception $e) {
+            throw new RepositoryException('Prediction not found.', 0, $e);
+        }
     }
 
-    public function getAll(): ?array
+    /**
+     * @return Prediction[]
+     * @throws RepositoryException
+     */
+    public function getAll(): array
     {
-        // TODO: Implement getAll() method.
+        try {
+            return $this->findAll();
+        } catch (\Exception $e) {
+            throw new RepositoryException('Failed to read Predictions.', 0, $e);
+        }
     }
 }

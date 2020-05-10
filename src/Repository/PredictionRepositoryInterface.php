@@ -3,12 +3,29 @@
 namespace App\Repository;
 
 use App\Entity\Prediction;
+use App\Service\Core\Exception\RepositoryException;
 
 interface PredictionRepositoryInterface
 {
+    /**
+     * @param int $id
+     * @return null|Prediction
+     *
+     * @throws RepositoryException
+     */
     public function getById(int $id): ?Prediction;
 
-    public function getAll(): ?array;
+    /**
+     * @return array
+     *
+     * @throws RepositoryException
+     */
+    public function getAll(): array;
 
-    public function save(Prediction $predictionEntity): bool;
+    /**
+     * @param Prediction $predictionEntity
+     *
+     * @throws RepositoryException
+     */
+    public function save(Prediction $predictionEntity): void;
 }
