@@ -7,6 +7,7 @@ use App\Service\Core\Exception\ResourceNotFoundException;
 use App\Service\Core\RestRequestValidator;
 use App\Service\Prediction\Exception\PredictionEntityException;
 use App\Service\Prediction\PredictionManagerService;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,10 +22,14 @@ class PredictionController
     /** @var PredictionManagerService */
     private $predictionManagerService;
 
-    public function __construct(RestRequestValidator $restRequestValidator, PredictionManagerService $predictionManagerService)
+    /** @var LoggerInterface */
+    private $logger;
+
+    public function __construct(RestRequestValidator $restRequestValidator, PredictionManagerService $predictionManagerService, LoggerInterface $logger)
     {
         $this->restRequestValidator = $restRequestValidator;
         $this->predictionManagerService = $predictionManagerService;
+        $this->logger = $logger;
     }
 
     /** @Route("/v1/predictions", name="create_prediction", methods={"POST"}) */
@@ -38,24 +43,45 @@ class PredictionController
             ]
         );
 
-        $violations = $this->restRequestValidator->validateJsonContent($request->getContent(), $requestValidation);
+        $requestContent = $request->getContent();
+        $violations = $this->restRequestValidator->validateJsonContent($requestContent, $requestValidation);
 
         if (!empty($violations)) {
-            //TODO log
+            $this->logger->error(
+                'Invalid request content.',
+                [
+                    'route' => 'create_prediction',
+                    'content' => $requestContent,
+                    'violations' => $violations,
+                ]
+            );
             return new Response(null, Response::HTTP_BAD_REQUEST);
         }
 
-        $content = json_decode($request->getContent(), true);
+        $content = json_decode($requestContent, true);
 
         $responseStatus = Response::HTTP_NO_CONTENT;
+        $exception = null;
         try {
             $this->predictionManagerService->createPrediction($content['event_id'], $content['market_type'], $content['prediction']);
         } catch (PredictionEntityException $e) {
-            //TODO log
+            $exception = $e;
             $responseStatus = Response::HTTP_BAD_REQUEST;
         } catch (RepositoryException | \Exception $e) {
-            //TODO log
+            $exception = $e;
             $responseStatus = Response::HTTP_INTERNAL_SERVER_ERROR;
+        }
+
+        if ($exception) {
+            $this->logger->error(
+                'Failed to update Prediction.',
+                [
+                    'route' => 'update_prediction',
+                    'content' => $requestContent,
+                    'exception' => $exception->getMessage(),
+                    'trace' => $exception->getTraceAsString(),
+                ]
+            );
         }
 
         return new Response(null, $responseStatus);
@@ -69,7 +95,14 @@ class PredictionController
         try {
             $predictions = $this->predictionManagerService->list();
         } catch (RepositoryException | \Exception $e) {
-            //TODO log
+            $this->logger->error(
+                'Failed to list Predictions.',
+                [
+                    'route' => 'list_all_predictions',
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]
+            );
             $responseStatus = Response::HTTP_INTERNAL_SERVER_ERROR;
         }
 
@@ -85,27 +118,48 @@ class PredictionController
             ]
         );
 
-        $violations = $this->restRequestValidator->validateJsonContent($request->getContent(), $requestValidation);
+        $requestContent = $request->getContent();
+        $violations = $this->restRequestValidator->validateJsonContent($requestContent, $requestValidation);
 
         if (!empty($violations)) {
-            //TODO log
+            $this->logger->error(
+                'Invalid request content.',
+                [
+                    'route' => 'update_prediction',
+                    'content' => $requestContent,
+                    'violations' => $violations,
+                ]
+            );
             return new Response(null, Response::HTTP_BAD_REQUEST);
         }
 
-        $content = json_decode($request->getContent(), true);
+        $content = json_decode($requestContent, true);
 
         $responseStatus = Response::HTTP_NO_CONTENT;
+        $exception = null;
         try {
             $this->predictionManagerService->changeStatus($id, $content['status']);
         } catch (PredictionEntityException $e) {
-            //TODO log
+            $exception = $e;
             $responseStatus = Response::HTTP_BAD_REQUEST;
         } catch (ResourceNotFoundException $e) {
-            //TODO log
+            $exception = $e;
             $responseStatus = Response::HTTP_NOT_FOUND;
         } catch (RepositoryException | \Exception $e) {
-            //TODO log
+            $exception = $e;
             $responseStatus = Response::HTTP_INTERNAL_SERVER_ERROR;
+        }
+
+        if ($exception) {
+            $this->logger->error(
+                'Failed to update Prediction.',
+                [
+                    'route' => 'update_prediction',
+                    'content' => $requestContent,
+                    'exception' => $exception->getMessage(),
+                    'trace' => $exception->getTraceAsString(),
+                ]
+            );
         }
 
         return new Response(null, $responseStatus);
