@@ -109,8 +109,8 @@ class PredictionController
         return new JsonResponse($predictions, $responseStatus);
     }
 
-    /** @Route("/v1/predictions/{id}/status", name="update_prediction", methods={"PUT"}, requirements={"id"="\d+"}) */
-    public function update(Request $request, $id): Response
+    /** @Route("/v1/predictions/{id}/status", name="update_prediction_status", methods={"PUT"}, requirements={"id"="\d+"}) */
+    public function updateStatus(Request $request, $id): Response
     {
         $requestValidation = new Assert\Collection(
             [
